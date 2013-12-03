@@ -1,19 +1,19 @@
 package edu.georgetown.explorer
 
-public class VCFile {
+public class VcfFileReader implements GenotypeFileReader {
 	
 	File file = null;
-	HashMap<String, HashMap<Integer, Record>> records= new HashMap<String, HashMap<Integer, Record>>();
-	HashMap<String, List<Integer>> sortedPositions = new HashMap<String, List<Integer>>();
-	Set<String> chromosomes = new HashSet<String>();
+	HashMap<String, HashMap<Integer, VcfFileRecord>> records= new HashMap<String, HashMap<Integer, VcfFileRecord>>();
+	HashMap<String, ArrayList<Integer>> sortedPositions = new HashMap<String, ArrayList<Integer>>();
+	HashSet<String> chromosomes = new HashSet<String>();
 	String[] samples = null
 
-	public VCFile(File file) {
+	public VcfFileReader(File file) {
 		if(!file.exists()) throw new FileNotFoundException();
 		this.file = file;
 		String[] headers = null;
 		Set<String> chromosomes = new HashSet<String>();
-		List<Record> records = new ArrayList<Record>()
+		List<VcfFileRecord> records = new ArrayList<VcfFileRecord>()
 		
 		file.eachLine {raw ->
 			if(raw.startsWith("##")) {
@@ -27,7 +27,7 @@ public class VCFile {
 			
 			else {
 				try {
-					Record record = createShallowRecord(raw);
+					VcfFileRecord record = createShallowRecord(raw);
 					records.add(record);
 				} catch(Exception e) {
 					println "Exception caught"				
@@ -39,12 +39,12 @@ public class VCFile {
 		this.chromosomes = this.records.keySet();
 	}
 	
-	public VCFile(String path) {
+	public VcfFileReader(String path) {
 		this(new File(path));
 	}
 	
-	private Record createShallowRecord(String raw) throws Exception {
-		Record record = new Record();
+	private VcfFileRecord createShallowRecord(String raw) throws Exception {
+		VcfFileRecord record = new VcfFileRecord();
 		String[] line = raw.split("\t");
 		String chromosome = line[0].replaceAll("[a-zA-Z]", "");
 		Integer position = new Integer(line[1]);
@@ -66,13 +66,13 @@ public class VCFile {
 		return positions;
 	}
 	
-	private void parseRecord(Record record) throws Exception {
+	private void parseRecord(VcfFileRecord record) throws Exception {
 		String[] line = record.line;
 		//String chromosome = line[0].replaceAll("[a-zA-Z]", "");
 		//Integer position = new Integer(line[1]);
 		//String rsid = line[2];
 		String reference = line[3];
-		String[] alternate = line[4].split(":");
+		String[] alternates = line[4].split(":");
 		Number quality = new Float(line[5]);
 		//if(line[5].indexOf(".") > -1) quality = new Float(line[5]);
 		//else quality = new Integer(line[5]);
@@ -84,10 +84,10 @@ public class VCFile {
 			info.put(infoField[0], infoField[1]);
 		}
 		String[] format = line[8].split(":");
-		Call test = new Call();
-		Call[] calls = new Call[this.samples.length];
+		//VcfCall test = new VcfCall();
+		VcfCall[] calls = new VcfCall[this.samples.length];
 		for (int i = 0; i < this.samples.length; i++) {
-			Call call = new Call();
+			VcfCall call = new VcfCall();
 			call.name = this.samples[i];
 			temp = line[i + 9].split(":");
 			String[] alleles = temp[0].split("/");
@@ -97,7 +97,7 @@ public class VCFile {
 			for(int j = 0; j < 2; j++) {
 				if(call.alleles[j] == 0) call.bases[j] = reference
 				else {
-					call.bases[j] = alternate[call.alleles[j] - 1]
+					call.bases[j] = alternates[call.alleles[j] - 1]
 				}
 			}
 			
@@ -111,7 +111,7 @@ public class VCFile {
 		//record.position = position;
 		//record.rsid = rsid;
 		record.reference = reference;
-		record.alternate = alternate;
+		record.alternates = alternates;
 		record.quality = quality;
 		record.filter = filter;
 		record.info = info;
@@ -122,22 +122,22 @@ public class VCFile {
 		//return record;
 	}
 	
-	private void organizeRecords(List<Record> records) {
+	private void organizeRecords(List<VcfFileRecord> records) {
 		records.each { record ->
 			if(this.records.get(record.chromosome)) {
 				this.records.get(record.chromosome).put(record.position, record);
 			}
 			
 			else {
-				HashMap<Integer, Record> allChromRecords = new HashMap<Integer, Record>();
+				HashMap<Integer, VcfFileRecord> allChromRecords = new HashMap<Integer, VcfFileRecord>();
 				allChromRecords.put(record.position, record);
 				this.records.put(record.chromosome, allChromRecords);
 			}
 		}
 	}
 	
-	public Record fetch(String chromosome, int position) {
-		Record record = this.records.get(chromosome).get(position);
+	public VcfFileRecord fetch(String chromosome, int position) {
+		VcfFileRecord record = this.records.get(chromosome).get(position);
 		if(record.shallow) {
 			 parseRecord(record);
 		}
@@ -145,22 +145,22 @@ public class VCFile {
 		return record;
 	}
 	
-	public class Record {
+	public class VcfFileRecord implements GenotypeFileRecord {
 		String chromosome;
 		Integer position;
 		String rsid;
 		String reference;
-		String[] alternate;
+		String[] alternates;
 		Number quality;
 		String filter;
 		Map<String, String> info = [:];
 		String[] format;
-		private HashMap<String, Call> calls = new HashMap<String, Call>(1);
+		private HashMap<String, VcfCall> calls = new HashMap<String, VcfCall>(1);
 		private String[] line = null;
 		boolean shallow = true;
 		
-		public setCalls(Call[] calls) {
-			this.calls = new HashMap<String, Call>(calls.length * 2);
+		public setCalls(VcfCall[] calls) {
+			this.calls = new HashMap<String, VcfCall>(calls.length * 2);
 			for(int i = 0; i < calls.length; i++) {
 				this.calls.put(calls[i].name, calls[i]);
 			}
@@ -170,11 +170,11 @@ public class VCFile {
 			return this.calls;
 		}
 		
-		public Call getGenotype(String name) {
+		public VcfCall getGenotype(String name) {
 			return this.calls.get(name);
 		}
 		
-		public Call[] getHets() {
+		public VcfCall[] getHets() {
 			def result = []
 			this.calls.each { sample, call ->
 				if(call.isHet()) result << call
@@ -183,7 +183,7 @@ public class VCFile {
 			return result.toArray()
 		}
 		
-		public Call[] getHomAlts() {
+		public VcfCall[] getHomAlts() {
 			def result = []
 			this.calls.each {sample, call ->
 				if(call.isHomAlt()) result << call
@@ -192,7 +192,7 @@ public class VCFile {
 			return result.toArray()
 		}
 		
-		public Call[] getHomRefs() {
+		public VcfCall[] getHomRefs() {
 			def result = []
 			this.calls.each {sample, call ->
 				if(call.isHomRef()) result << call
@@ -202,7 +202,8 @@ public class VCFile {
 		}
 	}
 	
-	public class Call {
+	public class VcfCall implements GenotypeCall {
+		
 		boolean called = false;
 		int[] alleles = new int[2];
 		String[] bases = new String[2];

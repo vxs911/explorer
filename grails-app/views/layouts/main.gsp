@@ -13,8 +13,10 @@
 		<link rel="apple-touch-icon" href="${resource(dir: 'images', file: 'apple-touch-icon.png')}">
 		<link rel="apple-touch-icon" sizes="114x114" href="${resource(dir: 'images', file: 'apple-touch-icon-retina.png')}">
 		<g:javascript src="jquery-1.10.2.min.js" />
+		<g:javascript src="jquery-ui.js" />
 		<g:javascript src="bootstrap.min.js" />
 		<g:javascript src="bootstrap-select.min.js" />
+		<g:javascript src="html5plots.js" />
 		<link rel="stylesheet" href="${resource(dir: 'css', file: 'bootstrap.min.css')}" type="text/css">
 		<link rel="stylesheet" href="${resource(dir: 'css', file: 'bootstrap-select.min.css')}" type="text/css">
 		<style type="text/css">

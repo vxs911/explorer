@@ -32,6 +32,15 @@
 			$("#position").selectpicker('refresh');
 		});		
 	});
+	
+	function promptForName(element) {
+		var name = prompt("Enter a name for this sample set", "Sample Name");
+		
+		if(name != null) {
+			$("input[name='name']").val(name);
+			element.form.submit();
+		}
+	}
 </g:javascript>
 </head>
 <body>
@@ -116,6 +125,7 @@
 						<label for="reference" class="col-sm-2 control-label">Samples</label>
 						<div class="col-sm-10">
 							<input type="checkbox" name="samples" value="het"> ${count} samples
+							<input type="hidden" name="name" value="sample name" />
 						</div>
 					</div>				
 				</g:if>						
@@ -123,7 +133,7 @@
   				<div class="form-group">
   					<div class="col-sm-10">
   						<g:if test="${samples}">
-  							<g:submitButton name="saveSamples" value="Save samples" class="btn btn-primary" />
+  							<g:submitButton name="saveSamples" value="Save samples" class="btn btn-primary" onclick="promptForName(this);" />
   							<g:submitButton name="startOver" value="Start Over" class="btn btn-primary" />
   						</g:if>
   						<g:else>
