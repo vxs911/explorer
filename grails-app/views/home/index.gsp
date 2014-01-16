@@ -10,15 +10,16 @@
   	<div class="row">
   		<div class="col-md-12">&nbsp;</div>
   		<div class="col-xs-12 col-md-8">
-  			<p class="lead">To start, upload a VCF file</p>
-  			<g:uploadForm role="form" name="chooseInput" method="post" controller="home" action="upload" >
-  				<div class="form-group">
-  					<label for="exampleInputFile">VCF File</label>
-  					<input type="file" name="vcfFile" />
-  					<p class="help-block">Browse to a VCF file and then click submit</p>
+  			<p class="lead">To start, tell us what kind of genotype and phenotype files you have</p>
+  			<g:form role="form" controller="genotype" action="selectGenotypeFile" method="GET">
+  				<div class="radio">
+  					<label><input type="radio" name="inputFileType" value="VCF">VCF</label>
   				</div>
-  				<button type="submit" class="btn btn-default">Submit</button>
-  			</g:uploadForm>
+  				<div class="radio">
+  					<label><input type="radio" name="inputFileType" value="PLINK">Plink .bim, .fam &amp; .bed</label>
+  				</div>  				
+  				<button type="submit" class="btn btn-primary">Submit</button>
+  			</g:form>
   		</div>
   	
   	</div>

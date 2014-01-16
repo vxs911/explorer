@@ -8,7 +8,7 @@ class PhenotypeService {
     def getPhenotypeReader(String fileName) {
 		log.debug("/Users/varun/dev/explorer/uploads/"+fileName)
 		File file = new File("/Users/varun/dev/explorer/uploads/"+fileName);
-		return new PhenotypeFileReader(file);
+		//return new PhenotypeFileReader(file);
     }
 	
 	def getKmPoints(List survivalData) {

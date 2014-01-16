@@ -86,6 +86,7 @@ grails.hibernate.cache.queries = false
 environments {
     development {
         grails.logging.jul.usebridge = true
+		grails.uploadDir = "/Users/varun/Desktop/Outcomes/uploads";
     }
     production {
         grails.logging.jul.usebridge = false
@@ -119,3 +120,23 @@ log4j = {
 
 	debug "grails.app", "listener"
 }
+
+// Added by the Spring Security Core plugin:
+grails.plugins.springsecurity.securityConfigType = "InterceptUrlMap"
+grails.plugins.springsecurity.interceptUrlMap = [
+	'/user/changePassword': ['ROLE_USER'],
+	'/user/updatePassword': ['ROLE_USER'],
+	'/user/changePassword/**': ['ROLE_USER'],
+	'/user/**': ['ROLE_ADMIN'],
+	'/home/**':    ['ROLE_ADMIN', 'ROLE_USER'],
+	'/genotype/**':    ['ROLE_ADMIN', 'ROLE_USER'],
+	'/phenotype/**':    ['ROLE_ADMIN', 'ROLE_USER']
+ ]
+grails.plugins.springsecurity.userLookup.userDomainClassName = 'edu.georgetown.explorer.security.User'
+grails.plugins.springsecurity.userLookup.authorityJoinClassName = 'edu.georgetown.explorer.security.UserRole'
+grails.plugins.springsecurity.authority.className = 'edu.georgetown.explorer.security.Role'
+grails.plugins.springsecurity.useSecurityEventListener = true
+grails.plugins.springsecurity.logout.afterLogoutUrl = '/login/afterLogout'
+grails.plugins.springsecurity.successHandler.defaultTargetUrl = '/home/index'
+grails.plugins.springsecurity.useSwitchUserFilter = true
+grails.plugins.springsecurity.ui.encodePassword = true

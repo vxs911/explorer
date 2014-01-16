@@ -59,6 +59,9 @@ grails.project.dependency.resolution = {
         compile ":scaffolding:2.0.1"
         compile ':cache:1.1.1'
 		compile ':webflow:2.0.8.1'
+		compile	':spring-security-core:1.2.6'
+		compile	':spring-security-ui:0.2'
+		compile ":mysql-connectorj:5.1.22.1"
 
         // plugins needed at runtime but not for compilation
         runtime ":hibernate:3.6.10.3" // or ":hibernate4:4.1.11.2"

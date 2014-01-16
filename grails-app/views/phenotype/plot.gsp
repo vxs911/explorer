@@ -15,18 +15,19 @@
 		data1.push(new kmpoint(65, 0.82));
 		data1.push(new kmpoint(130, 0.55));
 		data1.push(new kmpoint(200, 0.4));
-		
-		<g:each in="${session.kmpoints}">
-			data.push(new kmpoint(${it.x}, ${it.y}));
-		</g:each> 
-		
 		var kmplot = new KMPlot(canvas);
 		kmplot.xlabel = "Survival in months";
 		kmplot.ylabel = "Probability of event";
-		kmplot.addSeries(data, "series 1");
-		kmplot.plot();
-		kmplot.legend();
-	
+		
+		<g:each in="${session.kmpoints.keySet()}" var="sampleName">
+			<g:each in="${session.kmpoints.get(sampleName)}" var="${point}">
+				data.push(new kmpoint(${point.x}, ${point.y}));
+			</g:each>
+			kmplot.addSeries(data, "Sample Set ${sampleName}");
+			data = [];
+		</g:each> 
+			kmplot.plot();
+			kmplot.legend();
 	});
 </g:javascript>
 </head>

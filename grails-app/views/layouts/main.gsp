@@ -19,6 +19,9 @@
 		<g:javascript src="html5plots.js" />
 		<link rel="stylesheet" href="${resource(dir: 'css', file: 'bootstrap.min.css')}" type="text/css">
 		<link rel="stylesheet" href="${resource(dir: 'css', file: 'bootstrap-select.min.css')}" type="text/css">
+		<link rel="stylesheet" href="${resource(dir: 'css/cupertino', file: 'jquery-ui-1.10.3.custom.css')}" type="text/css">
+		<link rel="apple-touch-icon" href="${resource(dir: 'img', file: 'glyphicons-halflings-white.png')}">
+		<link rel="apple-touch-icon" href="${resource(dir: 'img', file: 'glyphicons-halflings.png')}">
 		<style type="text/css">
 			body {
 			  padding-top: 50px;
@@ -28,24 +31,36 @@
 		<r:layoutResources />
 	</head>
 	<body>
-	    <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
-	      <div class="container">
-	        <div class="navbar-header">
-	          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-	            <span class="sr-only">Toggle navigation</span>
+	    <div class="navbar navbar-inverse navbar-fixed-top">
+	      <div class="navbar-inner">
+	        <div class="container">
+	          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
 	            <span class="icon-bar"></span>
 	            <span class="icon-bar"></span>
 	            <span class="icon-bar"></span>
 	          </button>
-	          <a class="navbar-brand" href="#">Outcomes Explorer</a>
+	          <a class="brand" href="#">Outcomes Explorer</a>
+	          <sec:ifLoggedIn>
+		      <div class="nav-collapse collapse">
+		        <ul class="nav">
+		          <li class="active"><g:link controller="home" action="index">Home</g:link></li>
+		          <li><a href="#about">About</a></li>
+		          <li><a href="#contact">Contact</a></li>		        
+			      <g:if test="${session.savedSampleSets}">
+				  <li class="dropdown">
+				  <a href="#" class="dropdown-toggle" data-toggle="dropdown">Saved Sample Sets<b class="caret"></b></a>
+			        <ul class="dropdown-menu">
+			        	<g:each in="${session.savedSampleCohorts}">
+			        		<li><a href="#">${it.name}</a></li>
+			        	</g:each>
+			        </ul>				  
+				  </li>
+			      </g:if>
+		        </ul>
+		      </div><!--/.nav-collapse -->
+		      <ul class="nav" style="float:right"><li><g:link controller="logout" action="index">Log Out</g:link></li></ul>
+		      </sec:ifLoggedIn>
 	        </div>
-	        <div class="collapse navbar-collapse">
-	          <ul class="nav navbar-nav">
-	            <li class="active"><g:link controller="home" action="index">Home</g:link></li>
-	            <li><a href="#about">About</a></li>
-	            <li><a href="#contact">Contact</a></li>
-	          </ul>
-	        </div><!--/.nav-collapse -->
 	      </div>
 	    </div>	
 		<g:layoutBody/>
