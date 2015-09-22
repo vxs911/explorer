@@ -1,5 +1,4 @@
-
-<%@ page import="vaers.User" %>
+<%@ page import="edu.georgetown.explorer.security.User" %>
 <!DOCTYPE html>
 <html>
 	<head>

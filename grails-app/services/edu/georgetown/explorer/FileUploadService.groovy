@@ -1,6 +1,7 @@
 package edu.georgetown.explorer
 
 import grails.transaction.Transactional
+
 import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.multipart.MultipartHttpServletRequest
 
@@ -9,55 +10,89 @@ class FileUploadService {
 	
 	def grailsApplication;
 
-    public List<String> uploadPlinkFiles(MultipartHttpServletRequest mpr) {
+    public String createFullPath(String dirName, String fileName) {
+		return grailsApplication.config.grails.uploadDir+File.separator+dirName+File.separator+fileName;
+	}
+	
+	public String getDir(String uuid) {
+		if(uuid) return grailsApplication.config.grails.uploadDir + File.separator + uuid;
 		
-		String dirName = grailsApplication.config.grails.uploadDir+File.separator+UUID.randomUUID().toString();
-		new File(dirName).mkdir();
-		List<String> files = uploadFiles(mpr, "plink", dirName);
+		return null;
+	}
+	
+	public String getGenotypeDir(String uuid) {
+		if(uuid) return grailsApplication.config.grails.uploadDir + File.separator + uuid + File.separator + "genotype";
 		
-		/*MultipartFile bim = null;
-		MultipartFile tfam = null;
-		MultipartFile bed = null;
+		return null;
+	}
+	
+	public String getPhenotypeDir(String uuid) {
+		if(uuid) return grailsApplication.config.grails.uploadDir + File.separator + uuid + File.separator + "phenotype";
 		
-		for (MultipartFile file : files) {
-			if(file.originalFilename.endsWith(".bim")) bim = file;
-			
-			else if(file.originalFilename.endsWith(".tfam")) tfam = file;
-			
-			else if(file.originalFilename.endsWith(".bed")) bed = file;
+		return null;
+	}
+	
+	public File getPhenotypeFile(String uuid) {
+		if(uuid) {
+			String dir = getPhenotypeDir(uuid);
+			File[] files = new File(dir).listFiles();
+			return files[0];
 		}
 		
-		log.debug("upload dir is: "+grailsApplication.config.grails.uploadDir);
-
-		
-		bim.transferTo(new File(dirName+File.separator+bim.originalFilename));
-		tfam.transferTo(new File(dirName+File.separator+tfam.originalFilename));
-		bed.transferTo(new File(dirName+File.separator+bed.originalFilename));
-		
-		log.debug(["bim":dirName+File.separator+bim.originalFilename, "tfam":dirName+File.separator+tfam.originalFilename, "bed":dirName+File.separator+bed.originalFilename]);
-		
-		return ["bim":dirName+File.separator+bim.originalFilename, "tfam":dirName+File.separator+tfam.originalFilename, "bed":dirName+File.separator+bed.originalFilename];
-		*/
-		return files;
+		return null;
 	}
 	
-	public String uploadPhenotypeFile(MultipartHttpServletRequest mpr, String dir) {
-		return uploadFile(mpr, "phenotypeFile", dir);
-	}
-	
-	public List<String> uploadFiles(MultipartHttpServletRequest mpr, String name, String dir) {
-		List<MultipartFile> files = mpr.getFiles(name);
-		List<String> uploaded = new ArrayList<String>();
+	public boolean uploadFile(MultipartHttpServletRequest mpr, String name, String dirName){
+		MultipartFile file = mpr.getFile(name);
 		
-		for (MultipartFile file : files) {
-			String fileName = dir+File.separator+file.originalFilename;
+		String fileName = dirName+File.separator+file.originalFilename;
+		try {
 			file.transferTo(new File(fileName));
-			uploaded << fileName;
+			return true
+		} catch(IOException e) {
+			return false;
 		}
-		return uploaded;
 	}
 	
-	public String uploadFile(MultipartHttpServletRequest mpr, String name, String dir){
-		return uploadFiles(mpr, name, dir).get(0);
+	public boolean uploadFiles(MultipartHttpServletRequest mpr, String name, String dir) {
+		List<MultipartFile> files = mpr.getFiles(name);
+		
+		try {
+			for (MultipartFile file : files) {
+				String fileName = dir+File.separator+file.originalFilename;
+				file.transferTo(new File(fileName));
+			}
+			return true;
+			
+		} catch(IOException e) {
+			return false;
+		}
 	}
+	
+	public String uploadPhenotypeFile(MultipartHttpServletRequest mpr, String dirName) {
+		if(uploadFile(mpr, "phenotypeFile", dirName)) return mpr.getFile("phenotypeFile").getOriginalFilename();
+		
+		return null;
+	}
+	
+	public String uploadPlinkFiles(MultipartHttpServletRequest mpr) {	
+		String uuid = UUID.randomUUID().toString();
+		String dirName = grailsApplication.config.grails.uploadDir + File.separator + uuid;
+		new File(dirName).mkdir();
+		new File(dirName + File.separator + "genotype").mkdir();
+		new File(dirName + File.separator + "phenotype").mkdir();
+		if(uploadFiles(mpr, "plink", dirName + File.separator + "genotype")) return uuid;
+		return null;
+	}
+	
+	public String uploadVcfFile(MultipartHttpServletRequest mpr) {
+		String uuid = UUID.randomUUID().toString();
+		String dirName = grailsApplication.config.grails.uploadDir + File.separator + uuid;
+		new File(dirName).mkdir();
+		new File(dirName + File.separator + "genotype").mkdir();
+		new File(dirName + File.separator + "phenotype").mkdir();
+		if(uploadFiles(mpr, "vcf", dirName + File.separator + "genotype")) return uuid;
+		return null;
+	}
+	
 }

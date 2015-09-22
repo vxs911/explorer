@@ -7,22 +7,38 @@
 </head>
 <body>
   <div class="container">
-  	<div class="row">
-  		<div class="col-md-12">&nbsp;</div>
-  		<div class="col-xs-12 col-md-8">
-  			<p class="lead">Summary</p>
-  			<h3>Okay, here is a summary of the files you have uploaded in this session</h3>
+  	<div class="row">	
+  		<div class="col-md-12">
+  			<h2 class="page-header">Summary</h2> 			
+  			<p class="lead">Okay, here is a summary of the files loaded in this session</p>
+  			<b>Genotype Files</b>
   			<ol>
-  				<g:each in="${files}">
+  				<g:each in="${genotypeFiles}">
+  					<li>${it.getName()}</li>
+  				</g:each>
+  			</ol>  			
+   			<b>Phenotype Files</b>
+  			<ol>
+  				<g:each in="${phenotypeFiles}">
   					<li>${it.getName()}</li>
   				</g:each>
   			</ol>
-  			<p>You can now proceed to create your cohorts</p>
-  			<br> <br> 			
-  			<g:link controller="phenotype" action="selectPhenotype" class="btn btn-primary">Select phenotype-based cohort</g:link>
-  			<g:link controller="genotype" action="selectGenotype" class="btn btn-primary">Select genotype-based cohort</g:link>
+
+  			<g:if test="${!session.reader}">
+	  			<p>
+		  			Click the button below to configure the phenotype file for reading.
+	  			</p>
+	  			<br>
+	  			<g:link controller="phenotype" action="describe" class="btn btn-primary">Configure</g:link>
+	  			<br>
+ 			</g:if>
+  			<g:else>
+  				<p>You can now start creating cohorts
+  				or you can quickstart survival analysis</p>
+  				<g:link controller="cohorts" action="index" class="btn btn-primary">Create cohorts</g:link>
+  				<g:link controller="km" action="explore" class="btn btn-primary">Quickstart KM</g:link>
+  			</g:else>
   		</div>
-  	
   	</div>	  
   </div>
 </body>

@@ -9,13 +9,13 @@
   <div class="container">
   	<div class="row">
   		<div class="col-md-12">&nbsp;</div>
-  		<div class="col-xs-12 col-md-8">
+  		<div class="col-md-12">
   			<p class="lead">To start, upload a tab-separated phenotype file</p>
   			<g:uploadForm role="form" name="chooseInput" method="post" controller="phenotype" action="upload" >
   				<div class="form-group">
   					<label for="exampleInputFile">Phenotype File</label>
-  					<input type="file" name="phenotypeFile" />
-  					<p class="help-block">Browse to a tab-separated phenotype file and then click submit</p>
+  					<input type="file" name="phenotypeFile" id="phenotypeFile" />
+  					<p class="help-block"><small>Browse to a tab-separated phenotype file and then click submit</small></p>
   				</div>
   				<button type="submit" class="btn btn-primary">Submit</button>
   			</g:uploadForm>

@@ -1,4 +1,4 @@
-<%@ page import="vaers.Role" %>
+<%@ page import="edu.georgetown.explorer.security.Role" %>
 
 
 

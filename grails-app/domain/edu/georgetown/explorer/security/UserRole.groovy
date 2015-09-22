@@ -57,7 +57,6 @@ class UserRole implements Serializable {
 	static mapping = {
 		//id composite: ['role', 'user']
 		version false
-		datasource 'vaers'
 		table 'USER_ROLE'
 	}
 }

@@ -1,16 +1,98 @@
 package edu.georgetown.explorer
 
+import javax.servlet.http.HttpServletResponse;
+
 import org.springframework.web.multipart.MultipartHttpServletRequest
 import edu.georgetown.explorer.VcfFileRecord
 import edu.georgetown.explorer.VcfCall
+import grails.converters.JSON
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 
 class GenotypeController {
 	
 	def genotypeService, fileUploadService
+	def springSecurityService
+	def grailsApplication
 
     def index() { 
 		
+	}
+	
+	def ajaxGetRsIdsByGeneSym() {
+		String symbol = params["sym"]
+		GenotypeFileReader reader = session["reader"]
+		def rsIds = []
+		List<Integer> allRsIds = reader.getAllRsIds()
+		
+		withHttp(uri: "http://"+grailsApplication.config.annotate.host+":"+grailsApplication.config.annotate.port) {
+			def html = get(path : '/annotate/gene', contentType : groovyx.net.http.ContentType.JSON, query : [hgnc_sym:symbol, requested:'rsid']) { resp, json ->
+				json["rsids"].each { rsId ->
+					//Integer rsId = NumberUtils.toInt(StringUtils.removePattern(it, "[^0-9]"));
+					if(allRsIds.contains(rsId)) rsIds << rsId
+				}
+			}
+		 }
+		render rsIds as JSON
+	}
+	
+	def ajaxGetGenotypeByRsId() {
+		String rsId = params["rs_id"]?.trim();
+		GenotypeFileReader reader = session["reader"];
+		GenotypeFileRecord record = null;
+		def jsonObject = [:];
+		
+		if(rsId != null) {
+			record = reader.fetchByRsId(rsId);
+			jsonObject = genotypeService.getGenotypeFromRecord(record, session);
+		}
+		
+		render jsonObject as JSON
+	}
+	
+	def ajaxGetGenotypeByChromosomeAndPosition() {
+		String chromosome = params["chromosome"]?.trim();
+		int position = params.int("position");
+		log.debug "chromosome is: ${chromosome} and position is: ${position}"
+		GenotypeFileReader reader = session["reader"];
+		GenotypeFileRecord record = null;
+		def jsonObject = [:];
+		
+		if(chromosome && position) {
+			record = reader.fetch(chromosome, position);
+			jsonObject = genotypeService.getGenotypeFromRecord(record, session);
+		}
+		
+		render jsonObject as JSON
+	}
+	
+	def ajaxSaveCohort() {
+		String genotypeType = params["genotype_type"]?.trim();
+		String name = params["cohort_name"].trim();
+		List<GenotypeCall> calls = null;
+		String[] individualIds = null;
+		
+		if(genotypeType == "het") {
+			individualIds = session["tempSampleCohorts"].get(0)["individuals"];
+		}
+		
+		else if(genotypeType == "hom_ref") {
+			individualIds = session["tempSampleCohorts"].get(1)["individuals"];
+		}
+		
+		else {
+			individualIds = session["tempSampleCohorts"].get(2)["individuals"];
+		}
+		
+		def savedSampleCohorts = session["savedSampleCohorts"] ?: [];
+		
+		savedSampleCohorts << ["name":name, "individuals":individualIds];
+		
+		session["savedSampleCohorts"] = savedSampleCohorts;
+		log.debug "saved ${name} cohort of type ${genotypeType} with ${individualIds.length} individuals";
+		log.debug "individuals are: "+individualIds
+		
+		render(status:HttpServletResponse.SC_OK);
 	}
 	
 	def selectGenotypeFileFlow = {
@@ -47,49 +129,69 @@ class GenotypeController {
 		
 		uploadVcf {
 			action {
-				MultipartHttpServletRequest mpr = (MultipartHttpServletRequest) request;
-				def file = mpr.getFile("vcfFile");
-				def random = new Random();
-				def calendar = new java.util.GregorianCalendar();
-				String fileName = calendar.get(Calendar.YEAR).toString()+calendar.get(Calendar.MONTH).toString()+calendar.get(Calendar.DATE).toString()+random.nextInt().toString()+".vcf";
-				if(!file.empty) {
-					File newFile = new File("/Users/varun/dev/explorer/uploads/"+fileName);
-					file.transferTo(newFile);
-				}
+				session["reader"] = null;
+				session["type"] = null;
+				session["dir"] = null;
+				session["phenotypeFileReader"] = null;
+				session["survivalTimeVariableName"] = null;
 				
-				def vcf = genotypeService.processFile(fileName)
-				session.vcf = vcf
-				def model = ["count":vcf.samples.length, "samples":vcf.samples]
+				MultipartHttpServletRequest mpr = (MultipartHttpServletRequest) request;
+				String dir = fileUploadService.uploadVcfFile(mpr);
+				log.debug "dir is: "+dir
+				GenotypeFileReader reader = GenotypeFileReader.getFileReader(new File(fileUploadService.getGenotypeDir(dir)).listFiles()[0]);
+				session["dir"] = dir;
+				
+				UserFiles userFiles = new UserFiles();
+				userFiles.user = springSecurityService.getCurrentUser();
+				userFiles.dir = dir;
+				userFiles.type = StringUtils.splitByCharacterTypeCamelCase(reader.getClass().getSimpleName())[0].toUpperCase();;
+				userFiles.identifier = (params["identifier"] ?: userFiles.dir).trim();
+				userFiles.phenotypeFileDesc = null;
+				userFiles.dateCreated = new Date();
+				userFiles.lastUpdated = new Date();
+				userFiles.save(flush: true);
+				flow["type"] = userFiles.type;
+				
 			}
 			on("success").to "summary"
 		}
 		
 		uploadPlink {
 			action {
-				MultipartHttpServletRequest mpr = (MultipartHttpServletRequest) request;
-				List<String> files = fileUploadService.uploadPlinkFiles(mpr);
-
-				GenotypeFileReader reader = GenotypeFileReader.getFileReader(new File(files.get(0)));
-				reader.read();
-				Individual[] individuals = reader.getIndividuals();
+				session["reader"] = null;
+				session["type"] = null;
+				session["dir"] = null;
+				session["phenotypeFileReader"] = null;
+				session["survivalTimeVariableName"] = null;
 				
-				def model = ["count":individuals.length, "samples":individuals];
-				session["type"] = StringUtils.splitByCharacterTypeCamelCase(reader.getClass().getSimpleName())[0].toUpperCase();
-				session["reader"] = reader;
-				session["dir"] = new File(files.get(0)).getParent();
-				return model;
+				MultipartHttpServletRequest mpr = (MultipartHttpServletRequest) request;
+				String dir = fileUploadService.uploadPlinkFiles(mpr);
+				log.debug "dir is: "+dir
+				GenotypeFileReader reader = GenotypeFileReader.getFileReader(new File(fileUploadService.getGenotypeDir(dir)).listFiles()[0]);
+				session["dir"] = dir;
+				
+				UserFiles userFiles = new UserFiles();
+				userFiles.user = springSecurityService.getCurrentUser();
+				userFiles.dir = dir;
+				userFiles.type = StringUtils.splitByCharacterTypeCamelCase(reader.getClass().getSimpleName())[0].toUpperCase();;
+				userFiles.identifier = (params["identifier"] ?: userFiles.dir).trim();
+				userFiles.phenotypeFileDesc = null;
+				userFiles.dateCreated = new Date();
+				userFiles.lastUpdated = new Date();
+				userFiles.save(flush: true);
+				flow["type"] = userFiles.type;
 			}
-			on("success").to "afterUpload"
+			on("success").to "summary"
 		}
 		
 		afterUpload {
 			action {
-				Class _class = session["reader"].getClass();
+				/*Class _class = session["reader"].getClass();
 				String type = "";
 				if(_class == PlinkFileReader.class) type = "PLINK";
 				
 				else if(_class == VcfFileReader.class) type = "VCF";
-				return ["type":type]
+				return ["type":type]*/
 			}
 			
 			on("success").to "summary"
@@ -101,16 +203,25 @@ class GenotypeController {
 	}
 	
 	def selectGenotypeFlow = {
+		getRsid {
+			action {
+				def context = flow.persistenceContext;
+				flow.clear();
+				flow.persistenceContext = context;
+			}
+			on("success").to "typeRsid"
+		}
+		typeRsid {
+			render(view: "select")
+			on("submit").to "getGenotypes"
+			on("doNotKnow").to "getChromosome"
+		}
 		getChromosome {
 			action {
-				flow.remove("mode");
-				flow.remove("chromosome");
-				flow.remove("samples");
-				flow.remove("position");
-				flow.remove("positions");
-				flow.remove("reference");
-				flow.remove("alternate");
-				flow.remove("genotype_type");
+				def context = flow.persistenceContext;
+				flow.clear();
+				flow.persistenceContext = context;
+				
 				GenotypeFileReader reader = session["reader"];
 				def chromosomes = reader.chromosomes;
 				[chromosomes:chromosomes]
@@ -169,7 +280,7 @@ class GenotypeController {
 				flow.remove("rangeIndex");
 				flow.remove("positions");
 				flow.remove("position");
-				flow.remove("samples");
+				flow.remove("individuals");
 				flow.remove("positions");
 				flow.remove("reference");
 				flow.remove("alternate");
@@ -198,8 +309,14 @@ class GenotypeController {
 		
 		getPositions {
 			action {
-				def positions = flow["groups"].get(params.int("rangeIndex"));
-				def model = [positions:positions, "rangeIndex":params["rangeIndex"] ];
+				flow.remove("reference");
+				flow.remove("alternate");
+				flow.remove("genotype_type");
+				flow.remove("individuals");
+				
+				Integer rangeIndex = flow["rangeIndex"]?: params.int("rangeIndex")
+				def positions = flow["groups"].get(rangeIndex);
+				def model = [positions:positions, "rangeIndex":rangeIndex];
 				
 				return model;
 			}
@@ -215,14 +332,29 @@ class GenotypeController {
 		
 		getGenotypes {
 			action {
-				String position = params["position"]?: flow["position"];
-				def chromosome = flow["chromosome"];
-				flow.remove("genotype_type");
-				flow.remove("samples");
-				
+				GenotypeFileRecord record = null;
 				GenotypeFileReader reader = session["reader"];
-				def record = reader.fetch(chromosome, position.toInteger());
-				return ["position":position, "reference":record.reference, "alternate":record.alternates.join(",")]
+				String rsId = flow["rsId"]?: params["rs_id"]?.trim();
+				if(rsId != null) {
+					record = reader.fetchByRsId(rsId);
+					flow["rsId"] = rsId;
+					log.debug "record is: "+record.rsid
+					log.debug "position is: "+record.position
+				}
+				
+				else {
+					String position = flow["position"]?: params["position"] ;
+					String chromosome = flow["chromosome"];
+					record = reader.fetch(chromosome, NumberUtils.toInt(position));
+					flow["position"] = position;
+				}
+
+				flow.remove("genotype_type");
+				flow.remove("individuals");
+				 
+				flow["reference"] = record.reference;
+				flow["alternate"] = record.alternates.join(",");	
+				flow["count"] = ["het":record.getHets().size(), "hom_ref":record.getHomRefs().size(),"hom_alt":record.getHomAlts().size()];			
 			}
 			on("success").to "showGenotypes"
 		}
@@ -230,54 +362,118 @@ class GenotypeController {
 		showGenotypes {
 			render(view: 'select')
 			on("submit").to "getSamples"
+			on("saveSamples").to "getSamples"
+			on("changeRsId").to "getRsid"
 			on("changeChromosome").to "getChromosome"
+			on("changeRangeIndex").to "getRangeIndex"
 			on("changePositionWithRange").to "getPositions"
 			on("changePositionWithType").to "typePosition"
+			on("createKmPlot").to "createKmData"
 		}
 		
 		getSamples {
-			log.debug("enter");
 			action {
+				log.debug("enter getSamples");
+				log.debug params
 				List<GenotypeCall> calls;
-				def samples = [];
 				GenotypeFileReader reader = session["reader"];
-				String position = flow["position"];
-				String chromosome = flow["chromosome"];
-				GenotypeFileRecord<? extends GenotypeCall, ?> record = reader.fetch(chromosome, position.toInteger());
+
+				GenotypeFileRecord<? extends GenotypeCall, ?> record = null;
+				if(flow["rsId"]) {
+					record = reader.fetchByRsId(flow["rsId"]);
+				}
+				else {
+					String position = flow["position"];
+					String chromosome = flow["chromosome"];
+					record = reader.fetch(chromosome, NumberUtils.toInt(position));
+				}
 				if(params["genotype_type"] == "het") calls = record.getHets();
 				
 				else if(params["genotype_type"] == "hom_ref") calls = record.getHomRefs();
 				
 				else calls = record.getHomAlts();
-				samples = calls?.collect {it.getIndividual().getId()};
+				def individuals = calls?.collect {it.getIndividual()}.toArray();
+				//def model = ["genotype_type":params["genotype_type"]];
+				//if(individuals && individuals.length > 0) model["individuals"] = individuals;  
 				
-				if(!samples || samples.size() == 0) samples << "None found"
-				return ["genotype_type":params["genotype_type"], "samples":samples, "count": samples.size()]
+				def cohortName = params["cohort-name"];
+				def savedSampleCohorts = session["savedSampleCohorts"] ?: [];
+				
+				savedSampleCohorts << ["name":cohortName, "individuals":individuals];
+				session["savedSampleCohorts"] = savedSampleCohorts
+				
+				flow["cohortName"] = cohortName;		
+				//return model;
 			}
-			on("success").to "showSamples"
+			on("success").to "saveSuccess"
 		}
 		
 		showSamples {
 			render(view: 'select')
 			on("startOver").to "getChromosome"
 			on("saveSamples").to "saveSamples"
+			on("changeRsId").to "getRsid"
 			on("changeChromosome").to "getChromosome"
+			on("changePositionWithRange").to "getPositions"
 			on("changePosition").to "enterPosition"
 			on("changeGenotype").to "getGenotypes"
 		}
 		
 		saveSamples {
 			action {
-				def sampleName = params["samplename"];
-				def savedSamples = session["savedSamples"]
+				def cohortName = params["cohort-name"];
+				def savedSampleCohorts = session["savedSampleCohorts"] ?: [];
 				
-				if(!savedSamples) savedSamples = [:];
-				
-				savedSamples[sampleName] = flow["samples"];
-				session["savedSamples"] = savedSamples
-				return ["samplename":sampleName]
+				savedSampleCohorts << ["name":cohortName, "individuals":flow["individuals"]];
+				session["savedSampleCohorts"] = savedSampleCohorts
+				return ["cohortName":cohortName]
 			}
 			on("success").to "saveSuccess"
+		}
+		
+		createKmData {
+			action {
+				List<GenotypeCall> calls = null;
+				GenotypeFileReader reader = session["reader"];
+				GenotypeFileRecord<? extends GenotypeCall, ?> record = null;
+				
+				if(flow["rsId"]) {
+					record = reader.fetchByRsId(flow["rsId"]);
+				}
+				else {
+					String position = flow["position"];
+					String chromosome = flow["chromosome"];
+					record = reader.fetch(chromosome, NumberUtils.toInt(position));
+				}
+				
+				def individuals = null;
+				def tempSampleCohorts = [];
+				
+				calls = record.getHets();
+				individuals = calls?.collect {it.getIndividual()}.toArray();
+				tempSampleCohorts << ["name":record.reference+"-"+record.alternates[0], "individuals":individuals];
+				log.debug "temp1 size: "+individuals.length;
+				
+				calls = record.getHomRefs();
+				individuals = calls?.collect {it.getIndividual()}.toArray();
+				tempSampleCohorts << ["name":record.reference+"-"+record.reference, "individuals":individuals];
+				log.debug "temp2 size: "+individuals.length;
+				
+				calls = record.getHomAlts();
+				individuals = calls?.collect {it.getIndividual()}.toArray();
+				tempSampleCohorts << ["name":record.alternates[0]+"-"+record.alternates[0], "individuals":individuals];	
+				log.debug "temp3 size: "+individuals.length;
+				
+				//log.debug "temp cohorts: "+tempSampleCohorts
+				
+				session["tempSampleCohorts"] = tempSampleCohorts;
+				
+			}
+			on("success").to "createKmPlot"
+		}
+		
+		createKmPlot {
+			redirect (controller:"km", action:'index', params: ["cohort-type": "temp"])
 		}
 		
 		saveSuccess {

@@ -1,3 +1,4 @@
+
 class UrlMappings {
 
 	static mappings = {
@@ -6,8 +7,8 @@ class UrlMappings {
                 // apply constraints here
             }
         }
-
-        "/"(view:"/home/index")
+		"/"(controller:'home', action:'index')
         "500"(view:'/error')
+		name loadSession: "/home/loadSession/$dir"(controller:'home',action:'loadSession')
 	}
 }

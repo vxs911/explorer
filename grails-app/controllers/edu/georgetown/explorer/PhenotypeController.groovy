@@ -1,87 +1,152 @@
 package edu.georgetown.explorer
 
+import edu.georgetown.explorer.tabular.TabularFileReader
+import grails.converters.JSON
 import org.springframework.web.multipart.MultipartHttpServletRequest
+import javax.servlet.http.HttpServletResponse;
+import java.util.Random;
 
 class PhenotypeController {
 	
-	def phenotypeService, fileUploadService
+	def phenotypeService, genotypeService, fileUploadService
 
     def index() { 
-		//if(session.phenotypeFileReader) render(view:'selectSampleSet')
+		
 	}
 	
 	def upload() {
-		MultipartHttpServletRequest mpr = (MultipartHttpServletRequest) request;
-		String fileName = fileUploadService.uploadPhenotypeFile(mpr, session["dir"]);
+		MultipartHttpServletRequest mpr = (MultipartHttpServletRequest) request;		
+		String dir = session["dir"];
+		String fileName = fileUploadService.uploadPhenotypeFile(mpr, fileUploadService.getPhenotypeDir(dir));
 		
-		PhenotypeFileReader phenotypeFileReader = session["reader"].getPhenotypeFileReader(new File(fileName), true);
-		phenotypeFileReader.read();
-		session["phenotypeFileReader"] = phenotypeFileReader
-		
-		def model = ["headers": phenotypeFileReader.phenotypeNames]
-		
-		render(view: "describe", model: model)
+		redirect (action:'summary')
 	}
 	
 	def describe() {
-		
-	}
-	
-	def setSurvivalPhenotype() {
-		
-		//String sampleColumn = params["column-sample"];
-		String survivalPhenotype = params["phenotype-survival"]
-		
-		session["phenotype-survival"] = survivalPhenotype
-		
 		String dir = session["dir"];
+		File phenotypeFile = fileUploadService.getPhenotypeFile(dir);
+		String[] headers = phenotypeService.getHeader(phenotypeFile, "\t");
 		
-		//def samples = ["ID001", "ID002", "ID003"]
-		//def samples = reader.phenotypes.keySet()
-		render (view:'summary', model:["files":new File(dir).listFiles()] );
+		return ["headers":headers];
 	}
 	
-	def selectSampleSet() {
-		def sampleSetNames = params.list("sample-set-name");
-		log.debug("sampleSetName: "+sampleSetNames)
-		//log.debug(session["savedSamples"])
-		String survivalColumn = session["column-survival"];
-		def samples = [:]
-		def points = [:]
-		sampleSetNames.each {
-			samples[it] = session["savedSamples"].get(it)
+	def process() {
+		boolean containsHeader = params.boolean("contains_header");
+		int sampleColumn = params.int("sample_column");
+		log.debug "containsHeader: ${containsHeader}, sampleColumn: ${sampleColumn}"
+		Map<PhenotypeFileReader.CONFIG, String> configMap = new HashMap<String, String>();
+		
+		configMap.put(PhenotypeFileReader.CONFIG.CONTAINS_HEADER, containsHeader);
+		configMap.put(PhenotypeFileReader.CONFIG.SAMPLE_COLUMN, sampleColumn);
+		
+		UserFiles files = UserFiles.findByDir(session["dir"]);
+		files.phenotypeFileDesc = configMap.collect { key, value ->
+			[key, value].join("=")
+		}.join(":");
+		
+		log.debug "phenotypeFileDesc changed to: ${files.phenotypeFileDesc}"
+	
+		files.save(flush:true);
+		Map readers = genotypeService.readUploadedFiles(files);
+		
+		if(readers) {
+			session["type"] = files.type;
+			session["reader"] = readers?.reader;
+			session["phenotypeFileReader"] = readers?.phenotypeFileReader;
+			session["survivalTimeVariableName"] = null;
 		}
-		//def samples = session["savedSamples"].get(sampleSetName);
-		log.debug(samples)
-		//PhenotypeFileReader reader = (PhenotypeFileReader) session.phenotypeFileReader;
-		def survivalData = []
-		samples.each { key, value ->
-			value.each {
-				Float survivalTime = 0.0;
-				try {
-					//survivalTime = new Float(reader.getPhenotype(it, survivalColumn));
-					//log.debug(it+":"+survivalTime)
-				} catch(NumberFormatException e) {
-				
-				}
-				if(survivalTime > 0.0) survivalData << ["sample": it, "survival": survivalTime]
+		
+		forward (action: 'summary')
+	}
+	
+	def summary() {
+		String dir = session["dir"];
+		File[] genotypeFiles = new File(fileUploadService.getGenotypeDir(dir)).listFiles();
+		File[] phenotypeFiles = new File(fileUploadService.getPhenotypeDir(dir)).listFiles();
+		
+		return [genotypeFiles:genotypeFiles, phenotypeFiles:phenotypeFiles];
+	}
+	
+	def ajaxGetPhenotypeDescriptionFromName() {
+		PhenotypeFileReader phenotypeFileReader = session["phenotypeFileReader"];
+		TabularFileReader tabFileReader = phenotypeFileReader.getTabularFileReader();
+		String phenotypeName = params["phenotype_name"]?.trim();
+		Float max = tabFileReader.getColumnMaxValueAsFloat(phenotypeName);
+		Float min = tabFileReader.getColumnMinValueAsFloat(phenotypeName);
+		log.debug "max is ${max} and min is ${min}"
+		def jsonObject = [:];
+		
+		if((max != null) && (min != null)) {
+			jsonObject["minimum"] = min;
+			jsonObject["maximum"] = max;
+		}
+		
+		jsonObject["uniqueValues"] = tabFileReader.getColumnUniqueRawValuesArray(phenotypeName);
+		jsonObject["phenotypeName"] = phenotypeName;
+		render jsonObject as JSON;
+	}
+	
+	def ajaxGetCohortBasedOnPhenotype() {
+		PhenotypeFileReader phenotypeFileReader = session["phenotypeFileReader"];
+		Float minimum = params.float("minimum");
+		Float maximum = params.float("maximum");
+		String genotypeType = params["genotype_type"]?.trim();
+		String phenotypeName = params["phenotype_name"]?.trim();
+		String phenotypeValue = params["phenotype_value"]?.trim();
+		
+		def jsonObject = [:];
+		log.debug "params is: "+params
+		String[] individuals = null;
+		
+		if(genotypeType) {			
+			if(genotypeType == "het") {
+				individuals = session["tempSampleCohorts"].get(0)["individuals"];
 			}
-			points[key] = phenotypeService.getKmPoints(survivalData)
+			
+			else if(genotypeType == "hom_ref") {
+				individuals = session["tempSampleCohorts"].get(1)["individuals"];
+			}
+			
+			else {
+				individuals = session["tempSampleCohorts"].get(2)["individuals"];
+			}
 		}
-		//log.debug(survivalData)
-		//def points = phenotypeService.getKmPoints(survivalData)
-		session.kmpoints = points
-		//log.debug(points)
-		def model = ["kmpoints": points]
-				
-		render(view: 'plot', model: model)
+		
+		if(phenotypeValue) {
+			individuals = phenotypeService.filterCohortBasedOnPhenotypeValue(phenotypeFileReader, individuals, phenotypeName, phenotypeValue);
+		}
+		
+		else if(maximum && minimum) {
+			individuals = phenotypeService.filterCohortBasedOnPhenotypeRange(phenotypeFileReader, individuals, phenotypeName, minimum, maximum);
+		}
+		
+		jsonObject["count"] = individuals.length;
+		jsonObject["key"] = phenotypeService.createTemporaryCohortInSession(session, individuals);
+		render jsonObject as JSON;
+	}
+	
+	def ajaxSaveCohort() {
+		int cohortKey = params.int("cohort_key");
+		String cohortName = params["cohort_name"].trim();
+		def savedSampleCohorts = session["savedSampleCohorts"] ?: [];
+		savedSampleCohorts << ["name":cohortName, "individuals":session["tempPhenotypeCohort"][cohortKey]];
+		
+		log.debug "saved cohort, key ${cohortKey}, name: ${cohortName}"
+		
+		session["savedSampleCohorts"] = savedSampleCohorts;
+		render(status:HttpServletResponse.SC_OK);
 	}
 	
 	def selectPhenotypeFlow = {
 		getNames {
 			action {
 				PhenotypeFileReader phenotypeFileReader = session["phenotypeFileReader"];
-				def model = ["phenotypeNames": phenotypeFileReader.phenotypeNames]
+				String phenotypeSurvival = params["phenotype-survival"];
+				def phenotypeNames = []
+				phenotypeFileReader.phenotypeNames.each {
+					if(it != phenotypeSurvival) phenotypeNames << it
+				}
+				def model = ["phenotypeNames": phenotypeNames]
 				return model
 			}
 			on("success").to "selectName"
@@ -119,19 +184,18 @@ class PhenotypeController {
 		}
 		
 		showSampleSet {
-			render(view:'showSampleSet');
-			on("submit").to "saveSampleSet"
+			render(view:'showCohort');
+			on("submit").to "saveSampleCohort"
 		}
 		
-		saveSampleSet {
+		saveSampleCohort {
 			action {
-				String sampleSetName = params["sampleSetName"];
-				if(session["savedSampleCohorts"]) session["savedSampleCohorts"] << ["name":sampleSetName, "individuals":flow["individuals"]];
+				String cohortName = params["cohort-name"];
+				def savedSampleCohorts = session["savedSampleCohorts"] ?: [];
+				savedSampleCohorts << ["name":cohortName, "individuals":flow["individuals"]];
 				
-				else {
-					session["savedSampleCohorts"] = [];
-					session["savedSampleCohorts"] << ["name":sampleSetName, "individuals":flow["individuals"]];
-				}
+				session["savedSampleCohorts"] = savedSampleCohorts;
+				return ["name":cohortName]
 			}
 			on("success").to "summary"
 		}

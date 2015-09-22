@@ -1,0 +1,6 @@
+@CHARSET "US-ASCII";
+
+.clickSpan {
+	cursor: pointer;
+	text-decoration: none;
+}

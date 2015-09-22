@@ -12,7 +12,6 @@ class Role {
 	static mapping = {
 		cache true
 		version false
-		datasource 'vaers'
 		table 'ROLE'
 	}
 

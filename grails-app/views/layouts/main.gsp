@@ -16,54 +16,188 @@
 		<g:javascript src="jquery-ui.js" />
 		<g:javascript src="bootstrap.min.js" />
 		<g:javascript src="bootstrap-select.min.js" />
+		<g:javascript src="bootbox.min.js" />
 		<g:javascript src="html5plots.js" />
-		<link rel="stylesheet" href="${resource(dir: 'css', file: 'bootstrap.min.css')}" type="text/css">
+		<link rel="stylesheet" href="${resource(dir: 'css', file: 'bootstrap-theme.min.css')}" type="text/css">
 		<link rel="stylesheet" href="${resource(dir: 'css', file: 'bootstrap-select.min.css')}" type="text/css">
+		<link rel="stylesheet" href="${resource(dir: 'css', file: 'common.css')}" type="text/css">
 		<link rel="stylesheet" href="${resource(dir: 'css/cupertino', file: 'jquery-ui-1.10.3.custom.css')}" type="text/css">
 		<link rel="apple-touch-icon" href="${resource(dir: 'img', file: 'glyphicons-halflings-white.png')}">
 		<link rel="apple-touch-icon" href="${resource(dir: 'img', file: 'glyphicons-halflings.png')}">
 		<style type="text/css">
+		
+			/* Sticky footer styles
+			-------------------------------------------------- */
+			
+			html,
 			body {
-			  padding-top: 50px;
-			}			
+			  height: 100%;
+			  /* The html and body elements cannot have any padding or margin. */
+			}
+			
+			/* Wrapper for page content to push down footer */
+			#wrap {
+			  min-height: 100%;
+			  height: auto;
+			  /* Negative indent footer by its height */
+			  margin: 0 auto -120px;
+			  /* Pad bottom by footer height */
+			  padding: 0 0 60px;
+			}
+			
+			/* Set the fixed height of the footer here */
+			#footer {
+			  height: 80px;
+			  background-color: #18bc9c;
+			  margin-top:40px;
+			}
+			
+			
+			/* Custom page CSS
+			-------------------------------------------------- */
+			/* Not required for template or sticky footer method. */
+			
+			#wrap > .container {
+			  padding: 20px 15px 30px;
+			}
+			
+			#wrap > .container > .row {
+				padding-top:20px;
+			}
+			.container .text-muted {
+			  margin: 20px 0;
+			}
+			
+			#footer > .container {
+			padding-top: 20px;
+			  padding-left: 15px;
+			  padding-right: 15px;
+			}
+			
+			code {
+			  font-size: 80%;
+			}
+
 		</style>
+		<g:javascript>
+			<sec:ifLoggedIn> var myPing = setInterval(query, 10 * 1000);</sec:ifLoggedIn>
+			$("#navbar-messages").popover({html:true});
+			
+			$(document).ready(function(){
+				var currPage = "${controllerName}";
+				$("#main-navbar .active").removeClass("active");
+				$("#navbar-"+currPage).addClass("active");
+				$("#navbar-cohorts").click(function(){
+					<g:if test="${!session["reader"]}">
+						bootbox.alert("Please select an existing session or upload files to create a new session");
+						return false;
+					</g:if>
+				});
+				
+				$("#navbar-km").click(function(){
+					<g:if test="${!session["phenotypeFileReader"]}">
+						bootbox.alert("Please select an existing session or upload files to create a new session");
+						return false;
+					</g:if>
+				});				
+
+			});
+			
+			function query() {
+				$.ajax("<g:createLink controller="messages" action="query" />", { dataType:"json",
+					success:function(messages) {
+						//alert("number of messages: "+messages.length);
+						serverMessages = messages;
+						showAllMessages(messages);
+						$("#navbar-messages").find("span").html(messages.length);											
+						//$(".alert.alert-success").html(data).show();
+					}
+				});
+			}
+			
+			function showAllMessages(messages) {
+				//alert("showing messages");
+				var html = "Here are your messages: ";
+				html += "&lt;ol&gt;";
+				for(var i = 0; i < messages.length; i++) {
+					html += "&lt;li&gt;"+messages[i].content+"&lt;/li&gt;";
+				}
+				html += "&lt;/ol&gt;";
+				$("#navbar-messages").attr("data-content", html);
+			}
+			
+			function acknowledge() {
+				$.ajax("<g:createLink controller="home" action="acknowledge" />", { dataType:"text",
+					success:function(data) {
+						
+					}
+				});			
+			}
+		</g:javascript>
 		<g:layoutHead/>
 		<r:layoutResources />
 	</head>
 	<body>
-	    <div class="navbar navbar-inverse navbar-fixed-top">
-	      <div class="navbar-inner">
-	        <div class="container">
-	          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
-	            <span class="icon-bar"></span>
-	            <span class="icon-bar"></span>
-	            <span class="icon-bar"></span>
-	          </button>
-	          <a class="brand" href="#">Outcomes Explorer</a>
-	          <sec:ifLoggedIn>
-		      <div class="nav-collapse collapse">
-		        <ul class="nav">
-		          <li class="active"><g:link controller="home" action="index">Home</g:link></li>
-		          <li><a href="#about">About</a></li>
-		          <li><a href="#contact">Contact</a></li>		        
-			      <g:if test="${session.savedSampleSets}">
-				  <li class="dropdown">
-				  <a href="#" class="dropdown-toggle" data-toggle="dropdown">Saved Sample Sets<b class="caret"></b></a>
-			        <ul class="dropdown-menu">
-			        	<g:each in="${session.savedSampleCohorts}">
-			        		<li><a href="#">${it.name}</a></li>
-			        	</g:each>
-			        </ul>				  
-				  </li>
-			      </g:if>
-		        </ul>
-		      </div><!--/.nav-collapse -->
-		      <ul class="nav" style="float:right"><li><g:link controller="logout" action="index">Log Out</g:link></li></ul>
-		      </sec:ifLoggedIn>
-	        </div>
-	      </div>
-	    </div>	
-		<g:layoutBody/>
-		<r:layoutResources />
+    <!-- Wrap all page content here -->
+    <div id="wrap">
+
+      <!-- Fixed navbar -->
+		    <div class="navbar navbar-inverse navbar-fixed-top" id="main-navbar">
+		      <div class="container">
+		        <div class="navbar-header">
+		          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+		            <span class="icon-bar"></span>
+		            <span class="icon-bar"></span>
+		            <span class="icon-bar"></span>
+		          </button>
+		          <a class="navbar-brand" href="#">Outcomes Explorer</a>
+		        </div>
+			   <sec:ifLoggedIn>
+				<div class="collapse navbar-collapse">
+			  		<ul class="nav navbar-nav">
+			    		<li id="navbar-home"><g:link controller="home" action="index">Home</g:link></li>
+			    		<li id="navbar-cohorts"><g:link controller="cohorts" action="index">Cohort Builder</g:link></li>
+			    		<li id="navbar-km" class="dropdown">
+			    			<a href="#" class="dropdown-toggle" data-toggle="dropdown">KM Plots<b class="caret"></b></a>
+			    			<ul class="dropdown-menu">
+			    				<li><g:link controller="km" action="explore">Quickstart</g:link></li>
+			    				<li><g:link controller="km" action="index">Cohort based</g:link></li>
+			    			</ul>
+			    		</li>
+			    		<li id="navbar-messages" data-container="body" data-toggle="popover" data-placement="bottom" data-content="No messages found" >
+			    			<a href="#">Notifications <span class="badge">0</span></a>
+			    		</li>
+			  		</ul>
+			  		<ul class="nav navbar-nav" style="float:right">
+			  			<li class="dropdown">
+			  				<a href="#" class="dropdown-toggle" data-toggle="dropdown"><sec:loggedInUserInfo field="username" /><b class="caret"></b></a>
+			  				<ul class="dropdown-menu">
+			  					<li><a href="#">Change Password</a></li>
+			  					<li><a href="#">Admin</a></li>
+			  				</ul>
+			  			</li>
+			  			<li><a href="#about">About</a></li>
+						<li><a href="#contact">Contact</a></li>	
+						<li><g:link controller="logout" action="index">Log Out</g:link></li>
+			  		</ul>
+				</div><!--/.navbar-collapse -->
+			      </sec:ifLoggedIn>	        
+		      </div>
+		    </div>
+
+			<!-- Begin page content -->
+			<g:layoutBody/>
+			</div>
+
+		    <div id="footer">
+		      <div class="container">
+		      	<div class="row">
+					<div class="col-md-4"></div>
+					<div class="col-md-4"><img alt="" src="<g:resource dir="images" file="GU_logo.png" />"></div>
+					<!-- <div class="col-md-4"><img alt="" src="<g:resource dir="images" file="gumc.png" />"></div>  -->
+		      	</div>        
+		      </div>
+		    </div>
+	<r:layoutResources/>
 	</body>
 </html>

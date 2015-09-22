@@ -1,3 +1,4 @@
+
 dataSource {
     pooled = true
     driverClassName = "org.h2.Driver"
@@ -14,11 +15,11 @@ hibernate {
 // environment specific settings
 environments {
 	development {
-		dataSource_vaers {
+		dataSource {
 			//dbCreate = "validate" // one of 'create', 'create-drop', 'update', 'validate', ''
 			driverClassName = "com.mysql.jdbc.Driver"
 			dialect = "org.hibernate.dialect.MySQL5InnoDBDialect"
-			url = "jdbc:mysql://localhost/vaers"
+			url = "jdbc:mysql://localhost/outcomes"
 			logSql = true
 			username = "root"
 			password = ""
@@ -33,20 +34,8 @@ environments {
         }
     }
     production {
-        dataSource {
-            dbCreate = "update"
-            url = "jdbc:h2:prodDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE"
-            properties {
-               maxActive = -1
-               minEvictableIdleTimeMillis=1800000
-               timeBetweenEvictionRunsMillis=1800000
-               numTestsPerEvictionRun=3
-               testOnBorrow=true
-               testWhileIdle=true
-               testOnReturn=false
-               validationQuery="SELECT 1"
-               jdbcInterceptors="ConnectionState"
-            }
-        }
+		dataSource {
+			jndiName = "java:comp/env/jdbc/outcomesDB"
+		}
     }
 }

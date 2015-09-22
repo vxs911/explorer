@@ -33,21 +33,24 @@
 <body>
   <div class="container">
   	<div class="row">
-  		<div class="col-md-12">&nbsp;</div>
-  		<div class="col-xs-12 col-md-8">
-  			<p class="lead">Upload PLINK files</p>
+  		<div class="col-md-12">
+  			<h2 class="page-header">Upload files</h2>
+  		</div>
+  		<div class="col-md-4">
+  			<p class="lead" style="padding:0px">PLINK</p>
   			<g:uploadForm role="form" name="chooseInput" method="post" controller="genotype" action="selectGenotypeFile" >
-  				<div class="control-group">
-  					<label for="bim">PLINK Files (.bim, .tfam, .bed) </label>
-  					<div class="controls">
-  						<input type="file" name="plink" accept=".bim, .tfam, .bed" multiple />
-  					</div>
-  					<!-- <label for="tfam">TFAM File <input type="file" name="tfam" /> </label><br>
-  					<label for="bed">BED File <input type="file" name="bed" /> </label> -->
-  					
-  					<span class="help-block">Browse to directory containing the files above click submit</span>
+  				<div class="form-group">
+  					<label>Please provide a name for these files</label>	
+				    <input type="text" name="identifier" id="identifier" class="form-control"/>		    
   				</div>
-  				<g:submitButton name="submit" value="Upload" class="btn btn-primary" />
+  				<div class="form-group">
+  					<label class="control-label" for="plink">PLINK Files (.bim, .fam, .bed) </label>
+  					<input type="file" name="plink" id="plink" accept=".bim, .fam, .bed" multiple />	
+  				</div>
+  				<div class="form-group">
+  					<p class="help-block"><small>Browse to directory containing the files above click submit</small></p>					
+  					<g:submitButton name="submit" value="Upload" class="btn btn-primary" />
+  				</div>
   			</g:uploadForm>
   		</div>
   	

@@ -2,24 +2,26 @@ package edu.georgetown.explorer.security
 
 class User {
 
-	transient springSecurityService
+	//transient springSecurityService
 
 	int id
 	String username
 	String password
-	boolean enabled
-	boolean accountExpired
-	boolean accountLocked
-	boolean passwordExpired
+	boolean enabled = true
+	boolean accountExpired = false
+	boolean accountLocked = false
+	boolean passwordExpired = false
 	Date dateCreated
 	Date lastUpdated
 	Date lastLoginDate
 	Date lastFailedLoginDate
-	int failedLoginCount
+	int failedLoginCount = 0
 
 	static constraints = {
 		username blank: false, unique: true
 		password blank: false
+		lastLoginDate nullable: true
+		lastFailedLoginDate nullable: true
 	}
 
 	static mapping = {
@@ -27,7 +29,6 @@ class User {
 		table 'USER'
 		version false
 		autoTimestamp true
-		datasource 'vaers'
 	}
 
 	Set<Role> getAuthorities() {
@@ -45,6 +46,6 @@ class User {
 	}
 
 	protected void encodePassword() {
-		password = springSecurityService.encodePassword(password)
+		//password = springSecurityService.encodePassword(password)
 	}
 }

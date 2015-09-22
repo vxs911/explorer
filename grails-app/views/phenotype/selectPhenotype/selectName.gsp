@@ -26,6 +26,8 @@
 				$( "<span class=\"btn btn-default\">"+ui.draggable.text()+"&nbsp;&nbsp;<button type=\"button\" class=\"close\" onclick=\"$(this).parent().html('Sample survival')\" aria-hidden=\"true\">&times;</button></span>" ).appendTo( this );
 			}		
 		});
+		
+		$(".selectpicker").selectpicker();
 	
 	});
 
@@ -58,22 +60,18 @@
   	<div class="row">
   		<div class="col-md-12">&nbsp;</div>
   		<div class="col-xs-12 col-md-8">
-  			<p class="lead">Here are the different phenotypes we have found in your data</p>
-  			<p>Click on the one you are interested in</p>
+  			<p class="lead">Here are the different phenotypes we have found in your dataset</p>
+  			<p>Select the phenotype you want to filter upon</p>
   		</div>
   	</div>
   	
   	<div class="row">
   		<div class="col-md-3">
   			<g:form controller="phenotype" action="selectPhenotype" method="get">
-				<div class="btn-group-horizontal" id="draggable-headers">
-					<g:each in="${phenotypeNames}">
-						<span class="btn btn-default input" onclick="toggle(this);">${it}</span>
-					</g:each>								
-				</div>
-				<br>
-				<input type="hidden" name="phenotype" value="">
-				<g:submitButton name="submit" value="Continue" class="btn btn-primary" />
+  				<div class="form-group">
+	  				<g:select class="form-control" name="phenotype" from="${phenotypeNames}" class="selectpicker"/>
+  				</div>
+  				<g:submitButton name="submit" value="Continue" class="btn btn-primary" />
 			</g:form>
 		</div>		
   	</div>

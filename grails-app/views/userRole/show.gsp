@@ -1,5 +1,4 @@
-
-<%@ page import="vaers.UserRole" %>
+<%@ page import="edu.georgetown.explorer.security.UserRole" %>
 <!DOCTYPE html>
 <html>
 	<head>

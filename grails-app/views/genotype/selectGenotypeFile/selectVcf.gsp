@@ -8,13 +8,19 @@
 <body>
   <div class="container">
   	<div class="row">
-  		<div class="col-md-12">&nbsp;</div>
-  		<div class="col-xs-12 col-md-8">
-  			<p class="lead">To start, upload a VCF file</p>
+  		<div class="col-md-12">
+  			<h2 class="page-header">Upload files</h2>
+  		</div>
+  		<div class="col-md-4">
+  			<p class="lead">VCF</p>
   			<g:uploadForm role="form" name="chooseInput" method="post" controller="genotype" action="selectGenotypeFile" >
   				<div class="form-group">
-  					<label for="exampleInputFile">VCF File</label>
-  					<input type="file" name="vcfFile" />
+  					<label>Please provide a name for these files</label>	
+				    <input type="text" name="identifier" id="identifier" class="form-control"/>		    
+  				</div>
+  				<div class="form-group">
+  					<label for="exampleInputFile">VCF File (.vcf)</label>
+  					<input type="file" name="vcf" accept=".vcf" />
   					<p class="help-block">Browse to a VCF file and then click submit</p>
   				</div>
   				<g:submitButton name="submit" value="Upload" class="btn btn-primary" />

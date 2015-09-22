@@ -1,3 +1,4 @@
+
 // locations to search for config files that get merged into the main config;
 // config files can be ConfigSlurper scripts, Java properties files, or classes
 // in the classpath in ConfigSlurper format
@@ -87,10 +88,18 @@ environments {
     development {
         grails.logging.jul.usebridge = true
 		grails.uploadDir = "/Users/varun/Desktop/Outcomes/uploads";
+		r.host = "localhost"
+		r.port = "6311"
+		annotate.host = "localhost"
+		annotate.port = "8090"
     }
     production {
         grails.logging.jul.usebridge = false
-        // TODO: grails.serverURL = "http://www.changeme.com"
+		grails.uploadDir = "/home/ec2-user/explorer/uploads";
+		r.host = "localhost"
+		r.port = "6311"
+		annotate.host = "localhost"
+		annotate.port = "8040"
     }
 }
 
@@ -110,33 +119,47 @@ log4j = {
            'org.codehaus.groovy.grails.commons',            // core / classloading
            'org.codehaus.groovy.grails.plugins',            // plugins
            'org.codehaus.groovy.grails.orm.hibernate',      // hibernate integration
+		   'org.codehaus.groovy.grails.webflow',			// Spring Webflow
            'org.springframework',
            'org.hibernate',
            'net.sf.ehcache.hibernate'
-   error 'grails.app.services.org.grails.plugin.resource',
-   		'grails.app.taglib.org.grails.plugin.resource',
-		 'grails.app.resourceMappers.org.grails.plugin.resource'
+   error	'grails.app.services.org.grails.plugin.resource',
+   			'grails.app.taglib.org.grails.plugin.resource',
+			'grails.app.resourceMappers.org.grails.plugin.resource'
    //error 'org.codehaus.groovy.grails.plugins.springsecurity'
 
-	debug "grails.app", "listener"
+	debug "grails.app", "listener", 'org.codehaus.groovy.grails.webflow', 'edu.georgetown.explorer.security'
 }
 
 // Added by the Spring Security Core plugin:
-grails.plugins.springsecurity.securityConfigType = "InterceptUrlMap"
-grails.plugins.springsecurity.interceptUrlMap = [
+grails.plugin.springsecurity.securityConfigType = "InterceptUrlMap"
+grails.plugin.springsecurity.interceptUrlMap = [
+	'/user/**' : ['ROLE_ADMIN'],
+	'/login/**' : ['permitAll'],
+	'/logout/**' : ['permitAll'],
+	'/home/**' : ['ROLE_USER', 'ROLE_ADMIN'],
+	'/' : ['ROLE_USER', 'ROLE_ADMIN'],
 	'/user/changePassword': ['ROLE_USER'],
-	'/user/updatePassword': ['ROLE_USER'],
 	'/user/changePassword/**': ['ROLE_USER'],
-	'/user/**': ['ROLE_ADMIN'],
 	'/home/**':    ['ROLE_ADMIN', 'ROLE_USER'],
 	'/genotype/**':    ['ROLE_ADMIN', 'ROLE_USER'],
-	'/phenotype/**':    ['ROLE_ADMIN', 'ROLE_USER']
+	'/phenotype/**':    ['ROLE_ADMIN', 'ROLE_USER'],
+	'/km/**':    ['ROLE_ADMIN', 'ROLE_USER'],
+	'/cohorts/**':    ['ROLE_ADMIN', 'ROLE_USER'],
+	'/messages/**':    ['ROLE_ADMIN', 'ROLE_USER'],
+	'/**/js/**':                      ['permitAll'],
+	'/**/css/**':                     ['permitAll'],
+	'/**/images/**':                  ['permitAll'],
+	'/**/favicon.ico':                ['permitAll']
  ]
-grails.plugins.springsecurity.userLookup.userDomainClassName = 'edu.georgetown.explorer.security.User'
-grails.plugins.springsecurity.userLookup.authorityJoinClassName = 'edu.georgetown.explorer.security.UserRole'
-grails.plugins.springsecurity.authority.className = 'edu.georgetown.explorer.security.Role'
-grails.plugins.springsecurity.useSecurityEventListener = true
-grails.plugins.springsecurity.logout.afterLogoutUrl = '/login/afterLogout'
-grails.plugins.springsecurity.successHandler.defaultTargetUrl = '/home/index'
-grails.plugins.springsecurity.useSwitchUserFilter = true
-grails.plugins.springsecurity.ui.encodePassword = true
+
+// Added by the Spring Security Core plugin:
+grails.plugin.springsecurity.userLookup.userDomainClassName = 'edu.georgetown.explorer.security.User'
+grails.plugin.springsecurity.userLookup.authorityJoinClassName = 'edu.georgetown.explorer.security.UserRole'
+grails.plugin.springsecurity.authority.className = 'edu.georgetown.explorer.security.Role'
+grails.plugin.springsecurity.useSecurityEventListener = true
+grails.plugin.springsecurity.logout.afterLogoutUrl = '/login/afterLogout'
+grails.plugin.springsecurity.successHandler.defaultTargetUrl = '/home/index'
+grails.plugin.springsecurity.useSwitchUserFilter = true
+grails.plugin.springsecurity.ui.encodePassword = true
+grails.plugin.springsecurity.logout.handlerNames = ['myLogoutEventListener', 'securityContextLogoutHandler']
